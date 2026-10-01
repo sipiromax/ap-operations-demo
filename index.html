@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AP Operations Demo — V1</title>
+<style>
+:root {
+  --bg:#f6f7f9; --panel:#fff; --ink:#19202a; --muted:#667085; --line:#e4e7ec;
+  --accent:#2447d8; --accent-soft:#eef2ff; --good:#16794b; --warn:#9a6700; --bad:#b42318;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:#111827;color:#fff;padding:20px 26px;display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
+header h1{font-size:20px;margin:0} header p{margin:4px 0 0;color:#cbd5e1;font-size:13px}
+.badge-demo{border:1px solid #475569;border-radius:999px;padding:6px 10px;font-size:12px;color:#e2e8f0}
+main{max-width:1400px;margin:auto;padding:24px}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.kpi{padding:16px} .kpi .label{color:var(--muted);font-size:12px;margin-bottom:8px} .kpi .value{font-size:24px;font-weight:700}
+.toolbar{padding:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+input,select{border:1px solid #d0d5dd;border-radius:8px;padding:9px 10px;background:#fff;color:#344054}
+input{min-width:220px;flex:1}
+button{border:0;border-radius:8px;padding:9px 12px;cursor:pointer;font-weight:600}
+button.primary{background:var(--accent);color:#fff} button.ghost{background:#fff;border:1px solid #d0d5dd;color:#344054}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:12px;background:#f9fafb;color:#475467;border-bottom:1px solid var(--line);position:sticky;top:0}
+td{padding:12px;border-bottom:1px solid #eef0f3;white-space:nowrap}
+tr:hover{background:#fafbff} tr{cursor:pointer}
+.pill{display:inline-block;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:700}
+.pill.good{background:#ecfdf3;color:var(--good)} .pill.warn{background:#fffaeb;color:var(--warn)} .pill.bad{background:#fef3f2;color:var(--bad)} .pill.neutral{background:#f2f4f7;color:#475467}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:16px;align-items:start}
+.side{position:sticky;top:12px;display:none} .side.active{display:block}
+.side .head{padding:18px;border-bottom:1px solid var(--line)} .side .body{padding:18px}
+.side h2{font-size:18px;margin:0 0 6px} .meta{font-size:12px;color:var(--muted)}
+.section{margin:16px 0} .section h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#667085;margin:0 0 7px}
+.section p{font-size:13px;line-height:1.55;margin:0}
+.flow{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0}
+.step{font-size:11px;border:1px solid #d0d5dd;background:#fff;border-radius:6px;padding:5px 7px;color:#475467}
+.step.on{background:var(--accent-soft);border-color:#c7d2fe;color:#3730a3}
+.interview{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:14px;margin-top:14px}
+.answer{display:none;margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0}
+.empty{color:var(--muted);padding:26px;text-align:center}
+.footer-note{font-size:11px;color:#98a2b3;margin-top:16px;text-align:right}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}.layout{grid-template-columns:1fr}.side{position:relative}}
+@media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}main{padding:12px}header{padding:16px}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>AP Operations Demo</h1>
+    <p>Invoice processing · Exception review · Controls · Interview rehearsal</p>
+  </div>
+  <div class="badge-demo">Portfolio demo — fictitious data</div>
+</header>
+
+<main>
+  <section class="kpis" id="kpis"></section>
+
+  <div class="toolbar card">
+    <input id="q" placeholder="Search invoice, vendor, PO…"/>
+    <select id="status"><option value="">All statuses</option></select>
+    <select id="family"><option value="">All exception families</option></select>
+    <select id="type"><option value="">All invoice types</option></select>
+    <button class="ghost" id="reset">Reset</button>
+  </div>
+
+  <div class="layout">
+    <div class="card table-wrap">
+      <table>
+        <thead><tr>
+          <th>Invoice</th><th>Vendor</th><th>Type</th><th>PO</th><th>Amount</th>
+          <th>Due</th><th>Status</th><th>Exception</th><th>Risk</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="empty" class="empty" style="display:none">No invoice matches the current filters.</div>
+    </div>
+
+    <aside class="card side" id="side">
+      <div class="head">
+        <div style="display:flex;justify-content:space-between;gap:12px">
+          <div><h2 id="d-id"></h2><div class="meta" id="d-meta"></div></div>
+          <button class="ghost" id="close">Close</button>
+        </div>
+        <div class="flow" id="flow"></div>
+      </div>
+      <div class="body" id="detail"></div>
+    </aside>
+  </div>
+
+  <div class="footer-note">Personal learning & interview portfolio project. Not connected to SAP or any production system.</div>
+</main>
+
+<script>
+const invoices = [{"id": "INV-26001", "vendor": "Atlas Office SAS", "country": "FR", "type": "PO", "po": "45001211", "amount": 1840, "currency": "EUR", "due": "2026-09-28", "status": "Ready to post", "exception": "", "family": "", "stage": "Matched", "risk": "Low"}, {"id": "INV-26002", "vendor": "Alpha Components GmbH", "country": "DE", "type": "PO", "po": "45001234", "amount": 8420, "currency": "EUR", "due": "2026-09-28", "status": "Blocked", "exception": "Missing GR", "family": "Matching", "stage": "Validation", "risk": "Medium"}, {"id": "INV-26003", "vendor": "Nordic Supply AB", "country": "SE", "type": "PO", "po": "45001258", "amount": 12760, "currency": "EUR", "due": "2026-09-29", "status": "Review", "exception": "Price variance", "family": "Matching", "stage": "Validation", "risk": "Medium"}, {"id": "INV-26004", "vendor": "Delta Packaging BV", "country": "NL", "type": "PO", "po": "45001279", "amount": 6980, "currency": "EUR", "due": "2026-10-02", "status": "Review", "exception": "Quantity variance", "family": "Matching", "stage": "Validation", "risk": "Medium"}, {"id": "INV-26005", "vendor": "Nova Conseil SAS", "country": "FR", "type": "Non-PO", "po": "", "amount": 2180, "currency": "EUR", "due": "2026-09-30", "status": "Blocked", "exception": "Missing approval", "family": "Workflow", "stage": "Approval", "risk": "Medium"}, {"id": "INV-26006", "vendor": "Studio Horizon SARL", "country": "FR", "type": "Non-PO", "po": "", "amount": 4720, "currency": "EUR", "due": "2026-10-03", "status": "Review", "exception": "Missing PO / PO required", "family": "Process", "stage": "Validation", "risk": "Medium"}, {"id": "INV-26007", "vendor": "Beta Services Ltd", "country": "GB", "type": "PO", "po": "45001302", "amount": 3990, "currency": "EUR", "due": "2026-09-27", "status": "Blocked", "exception": "Potential duplicate", "family": "Data quality", "stage": "Validation", "risk": "High"}, {"id": "INV-26008", "vendor": "Lumi\u00e8re Media SAS", "country": "FR", "type": "Non-PO", "po": "", "amount": 3150, "currency": "EUR", "due": "2026-10-01", "status": "Review", "exception": "E-invoicing / VAT data validation", "family": "E-invoicing", "stage": "Validation", "risk": "Medium"}, {"id": "INV-26009", "vendor": "Orion Logistics SA", "country": "FR", "type": "PO", "po": "45001318", "amount": 15600, "currency": "EUR", "due": "2026-10-05", "status": "Posted", "exception": "", "family": "", "stage": "Posted", "risk": "Low"}, {"id": "INV-26010", "vendor": "Cobalt IT GmbH", "country": "DE", "type": "PO", "po": "45001325", "amount": 11750, "currency": "EUR", "due": "2026-09-26", "status": "Payment blocked", "exception": "Vendor bank change", "family": "Vendor master", "stage": "Payment", "risk": "High"}, {"id": "INV-26011", "vendor": "Greenline Facilities SAS", "country": "FR", "type": "PO", "po": "45001341", "amount": 6240, "currency": "EUR", "due": "2026-09-25", "status": "Ready for payment", "exception": "", "family": "", "stage": "Payment", "risk": "Low"}, {"id": "INV-26012", "vendor": "Epsilon Digital SRL", "country": "IT", "type": "E-invoice", "po": "45001356", "amount": 5340, "currency": "EUR", "due": "2026-10-06", "status": "Rejected", "exception": "E-invoicing / VAT data validation", "family": "E-invoicing", "stage": "Intake", "risk": "Medium"}, {"id": "INV-26013", "vendor": "Zenith Maintenance SAS", "country": "FR", "type": "PO", "po": "45001372", "amount": 9250, "currency": "EUR", "due": "2026-10-08", "status": "Posted", "exception": "", "family": "", "stage": "Posted", "risk": "Low"}, {"id": "INV-26014", "vendor": "Mercury Parts NV", "country": "BE", "type": "PO", "po": "45001388", "amount": 14120, "currency": "EUR", "due": "2026-09-24", "status": "Payment blocked", "exception": "Missing GR", "family": "Matching", "stage": "Payment", "risk": "Medium"}, {"id": "INV-26015", "vendor": "Clairmont Legal SAS", "country": "FR", "type": "Non-PO", "po": "", "amount": 7460, "currency": "EUR", "due": "2026-10-09", "status": "Posted", "exception": "", "family": "", "stage": "Posted", "risk": "Low"}];
+const cases = {"Missing GR": {"incident": "Invoice received against a valid PO, but the goods receipt is missing or incomplete.", "root": "Receipt has not been posted, or the PO line does not reflect the actual receipt.", "origin": "P2P / MM — PO, goods receipt and invoice matching.", "resolution": "Check PO line, delivery date and actual receipt. Ask the requester or warehouse to confirm receipt and post the GR, then reprocess the invoice.", "control": "GR ageing report, requester reminders and monitoring of old open PO lines.", "sap": "PO · GR · Invoice · GR/IR · Vendor open item", "question": "What would you check before asking someone to post the GR?", "answer": "PO number and line, quantity, delivery date, whether goods/services were actually received, whether a GR already exists on another line/document, and whether a return or reversal explains the mismatch."}, "Price variance": {"incident": "Invoice unit price is higher or lower than the PO price outside tolerance.", "root": "PO not updated, supplier pricing error, freight/charges not reflected, or contract mismatch.", "origin": "P2P / MM — invoice verification and tolerance controls.", "resolution": "Compare invoice, PO and contract. Confirm whether the PO must be corrected or the supplier should issue a corrected invoice/credit note.", "control": "PO price governance, tolerance monitoring and recurring-variance review by vendor/category.", "sap": "PO · Invoice verification · Tolerance keys · Vendor line item", "question": "Would you automatically change the PO to make the invoice pass?", "answer": "No. First establish the commercial cause and approval. A PO change should reflect a valid business decision, not simply remove an invoice block."}, "Quantity variance": {"incident": "Invoice quantity exceeds or differs from PO/GR quantity.", "root": "Partial receipt, duplicate billing, wrong invoice quantity, or incomplete GR.", "origin": "P2P / MM — three-way matching.", "resolution": "Reconcile ordered, received and invoiced quantities; correct the GR or request supplier correction as appropriate.", "control": "Three-way-match monitoring and aged blocked-invoice review.", "sap": "PO · GR · Invoice · GR/IR", "question": "What is the key distinction before resolving a quantity variance?", "answer": "Whether the operational receipt is wrong/missing or the supplier invoice itself is wrong. The correction path depends on that distinction."}, "Missing approval": {"incident": "Non-PO invoice cannot continue because the required business approval is absent.", "root": "Approver did not act, workflow routing is wrong, or cost object/owner is missing.", "origin": "AP workflow / Non-PO invoice approval.", "resolution": "Identify the correct owner and cost object, route for approval, and document the approval before posting.", "control": "Escalation rules, approval SLA and routing based on entity/cost centre/value.", "sap": "Workflow · Cost centre / internal order · Vendor invoice", "question": "What should AP avoid doing when approval is missing?", "answer": "Posting or releasing the invoice without the required approval trail unless an approved exception procedure exists."}, "Missing PO / PO required": {"incident": "Supplier submitted a non-PO invoice for spend that should have been purchased through a PO.", "root": "Bypassed procurement process, emergency purchase, or incorrect supplier invoicing route.", "origin": "Procure-to-Pay policy / Procurement compliance.", "resolution": "Confirm whether retrospective PO handling is permitted; otherwise route through the approved exception process and address the upstream procurement issue.", "control": "No-PO-no-pay policy, supplier communication and non-PO spend reporting.", "sap": "Vendor invoice · PO policy · Procurement controls", "question": "Why is this not just an AP problem?", "answer": "Because the root cause is upstream procurement/process compliance. AP sees the symptom when the invoice arrives."}, "Potential duplicate": {"incident": "Invoice resembles an invoice already posted or received.", "root": "Supplier resubmission, OCR/reference variation, duplicate file feed, or manual entry duplicate.", "origin": "AP controls / Data quality.", "resolution": "Compare vendor, invoice reference, amount, date, PO and attachment before posting. Reject or park the duplicate candidate.", "control": "Duplicate check using normalized invoice number, vendor, amount/date and workflow source.", "sap": "Vendor · Invoice reference · Amount · Posting history", "question": "Why is invoice number alone insufficient for duplicate detection?", "answer": "Formatting can vary. A reliable check uses several attributes such as normalized reference, vendor, amount, date and PO."}, "Vendor bank change": {"incident": "Invoice is due, but a recent supplier bank-account change creates payment risk.", "root": "Legitimate master-data update or potentially fraudulent change request.", "origin": "Vendor master / Payment control.", "resolution": "Keep payment blocked until the bank change is independently verified under the approved vendor-master procedure.", "control": "Maker-checker, independent callback, segregation of duties and audit trail for bank changes.", "sap": "Business Partner / Vendor master · Bank data · Payment block · F110 readiness", "question": "What matters more here: speed or independent verification?", "answer": "Independent verification. Payment should remain blocked until the bank change is validated through the approved control process."}, "E-invoicing / VAT data validation": {"incident": "Invoice is rejected or held because structured invoice or tax data is invalid, incomplete or inconsistent.", "root": "Schema/format error, missing mandatory field, invalid VAT/legal data, routing identifier issue or business-rule failure.", "origin": "E-invoicing intake / Invoice compliance / Data quality.", "resolution": "Read the rejection or validation reason, identify the failing field/rule, correct routing or master data where appropriate, or request a compliant supplier resubmission.", "control": "Upfront validation rules, rejection-code library, supplier feedback and recurring-error analysis.", "sap": "E-invoice intake · Tax code · Company code · Vendor master · AP workflow", "question": "Why should validation failures be categorized instead of handled one by one?", "answer": "Categorization reveals recurring root causes and supports preventive fixes in supplier data, routing, tax setup or validation rules."}};
+const euro = new Intl.NumberFormat('en-IE', {style:'currency',currency:'EUR',maximumFractionDigits:0});
+
+const els = {
+  q:document.getElementById('q'), status:document.getElementById('status'),
+  family:document.getElementById('family'), type:document.getElementById('type'),
+  tbody:document.getElementById('tbody'), side:document.getElementById('side'),
+  detail:document.getElementById('detail'), empty:document.getElementById('empty'),
+  kpis:document.getElementById('kpis'), flow:document.getElementById('flow')
+};
+
+function fillSelect(id, values) {
+  const sel = document.getElementById(id);
+  [...new Set(values.filter(Boolean))].sort().forEach(v=>{
+    const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o);
+  });
+}
+fillSelect('status', invoices.map(x=>x.status));
+fillSelect('family', invoices.map(x=>x.family));
+fillSelect('type', invoices.map(x=>x.type));
+
+function statusClass(s) {
+  if(['Posted','Ready for payment','Ready to post'].includes(s)) return 'good';
+  if(['Blocked','Payment blocked','Rejected'].includes(s)) return 'bad';
+  return 'warn';
+}
+function riskClass(s) { return s==='High'?'bad':s==='Medium'?'warn':'neutral'; }
+
+function renderKpis(rows) {
+  const total = rows.reduce((a,b)=>a+b.amount,0);
+  const exc = rows.filter(x=>x.exception).length;
+  const blocked = rows.filter(x=>/Blocked|Rejected/i.test(x.status)).length;
+  const pay = rows.filter(x=>x.status==='Ready for payment').length;
+  const high = rows.filter(x=>x.risk==='High').length;
+  const vals = [
+    ['Invoices', rows.length],
+    ['Total value', euro.format(total)],
+    ['Exceptions', exc],
+    ['Blocked / rejected', blocked],
+    ['Ready for payment', pay],
+    ['High-risk controls', high]
+  ];
+  els.kpis.innerHTML = vals.map(([l,v])=>`<div class="card kpi"><div class="label">${l}</div><div class="value">${v}</div></div>`).join('');
+}
+
+function filtered() {
+  const q=els.q.value.toLowerCase().trim();
+  return invoices.filter(x =>
+    (!q || [x.id,x.vendor,x.po,x.exception].join(' ').toLowerCase().includes(q)) &&
+    (!els.status.value || x.status===els.status.value) &&
+    (!els.family.value || x.family===els.family.value) &&
+    (!els.type.value || x.type===els.type.value)
+  );
+}
+
+function render() {
+  const rows=filtered();
+  renderKpis(rows);
+  els.tbody.innerHTML = rows.map(x=>`
+    <tr data-id="${x.id}">
+      <td><strong>${x.id}</strong></td>
+      <td>${x.vendor}</td>
+      <td>${x.type}</td>
+      <td>${x.po||'—'}</td>
+      <td>${euro.format(x.amount)}</td>
+      <td>${x.due}</td>
+      <td><span class="pill ${statusClass(x.status)}">${x.status}</span></td>
+      <td>${x.exception||'—'}</td>
+      <td><span class="pill ${riskClass(x.risk)}">${x.risk}</span></td>
+    </tr>`).join('');
+  els.empty.style.display = rows.length?'none':'block';
+  document.querySelectorAll('tbody tr').forEach(tr=>tr.addEventListener('click',()=>openDetail(tr.dataset.id)));
+}
+
+function openDetail(id) {
+  const x=invoices.find(r=>r.id===id);
+  const c=cases[x.exception];
+  document.getElementById('d-id').textContent=x.id;
+  document.getElementById('d-meta').textContent=`${x.vendor} · ${euro.format(x.amount)} · Due ${x.due}`;
+  els.side.classList.add('active');
+
+  const stages=['Received','Validated','Matched','Posted','Payment Ready','Paid'];
+  const active = x.status==='Ready to post'?2:x.status==='Posted'?3:x.status==='Ready for payment'?4:x.status==='Payment blocked'?4:1;
+  els.flow.innerHTML = stages.map((s,i)=>`<span class="step ${i<=active?'on':''}">${s}</span>`).join('');
+
+  if(!c) {
+    els.detail.innerHTML=`
+      <div class="section"><h3>Status</h3><p><span class="pill ${statusClass(x.status)}">${x.status}</span></p></div>
+      <div class="section"><h3>Processing note</h3><p>No exception is attached to this invoice. It illustrates the normal AP flow.</p></div>
+      <div class="section"><h3>Core checks</h3><p>Supplier and invoice reference · PO/non-PO route · tax data · approval/matching · posting status · payment readiness.</p></div>`;
+    return;
+  }
+
+  els.detail.innerHTML=`
+    <div class="section"><h3>Exception</h3><p><strong>${x.exception}</strong> · ${x.family} · Risk ${x.risk}</p></div>
+    <div class="section"><h3>Incident</h3><p>${c.incident}</p></div>
+    <div class="section"><h3>Root cause</h3><p>${c.root}</p></div>
+    <div class="section"><h3>SAP / process origin</h3><p>${c.origin}</p></div>
+    <div class="section"><h3>Resolution</h3><p>${c.resolution}</p></div>
+    <div class="section"><h3>Preventive control</h3><p>${c.control}</p></div>
+    <div class="section"><h3>SAP objects / touchpoints</h3><p>${c.sap}</p></div>
+    <div class="interview">
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px">INTERVIEW MODE</div>
+      <div style="font-size:13px;line-height:1.5">${c.question}</div>
+      <button class="primary" style="margin-top:10px" onclick="toggleAnswer(this)">Show answer</button>
+      <div class="answer">${c.answer}</div>
+    </div>`;
+}
+
+function toggleAnswer(btn) {
+  const a=btn.nextElementSibling;
+  const show=a.style.display!=='block';
+  a.style.display=show?'block':'none';
+  btn.textContent=show?'Hide answer':'Show answer';
+}
+window.toggleAnswer=toggleAnswer;
+
+['q','status','family','type'].forEach(id=>document.getElementById(id).addEventListener('input',render));
+document.getElementById('reset').addEventListener('click',()=>{
+  els.q.value='';els.status.value='';els.family.value='';els.type.value='';render();
+});
+document.getElementById('close').addEventListener('click',()=>els.side.classList.remove('active'));
+
+render();
+</script>
+</body>
+</html>
